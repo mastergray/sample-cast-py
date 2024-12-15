@@ -5,10 +5,10 @@ modules_dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 sys.path.append(modules_dir_path)
 
 # Dependenceis:
-from flask import Flask, request, jsonify, Response             # HTTP Server Framework
-from flask_cors import CORS                                     # For setting CORS
-from sample_cast_audio_manager import SampleCastAudioManager    # For managing audio with
-import signal                                                   # For shutting down audio manager when server is stopped
+from flask import Flask, request, jsonify, Response, send_from_directory    # HTTP Server Framework
+from flask_cors import CORS                                                 # For setting CORS
+from sample_cast_audio_manager import SampleCastAudioManager                # For managing audio with
+import signal                                                               # For shutting down audio manager when server is stopped
 
 class SampleCastServer:
     
@@ -102,14 +102,26 @@ class SampleCastServer:
 
                 print(f"Could Not Stop Audio: {err}")
                 return str(err), 500
+            
+        @self.app.route('/audio-slicer')
+        def serve_audio_slicer():
+
+            """Serves the "audio slicer" page for determining start and end times for an audio file"""
+
+            return send_from_directory('static', 'audio.slicer.html')
 
 
-    def start(self, host="127.0.0.1", port=5000):
+    def start(self, host="127.0.0.1", port=3000):
         """Starts server"""
         # Set up signal handlers to catch SIGINT (CTRL+C) and SIGTERM
-        signal.signal(signal.SIGINT, self.audioManager.shutdown)  # CTRL+C (SIGINT)
-        signal.signal(signal.SIGTERM, self.audioManager.shutdown)  # SIGTERM (for other shutdown scenarios)
+        signal.signal(signal.SIGINT, self.stopAudioManager)  # CTRL+C (SIGINT)
+        signal.signal(signal.SIGTERM, self.stopAudioManager)  # SIGTERM (for other shutdown scenarios)
         self.app.run(host=host, port=port, debug=True)  # Start Server
+
+    def stopAudioManager(self, signum=None, frame=None):
+        """Handles shutting down vizor using signal since Flask is already handling shutdown"""
+        self.audioManager.shutdown()
+        sys.exit(0)  # Gracefully exit the application
        
 # Example usage
 if __name__ == "__main__":

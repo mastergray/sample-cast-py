@@ -11,7 +11,6 @@ A RESTful API server for playing samples using HTTP requests
 
 ## TODO (12/14/24)
 
-- Create route for audio.slicer.html
-- Create requirements 
+- ~~Create route for audio.slicer.html~~
 - Document better
 - Test more
