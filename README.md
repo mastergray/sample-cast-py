@@ -9,3 +9,9 @@ A RESTful API server for playing samples using HTTP requests
 3. Start the virtual enviroment: `source venv/bin/activate`
 4. Install dependencies: `pip install -r requirements.txt`
 
+## TODO (12/14/24)
+
+- Create route for audio.slicer.html
+- Create requirements 
+- Document better
+- Test more
