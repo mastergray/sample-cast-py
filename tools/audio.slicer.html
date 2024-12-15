@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Trimmer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    .slider {
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+    }
+    .slider label {
+      margin-right: 10px;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 50%;
+      height: 8px;
+      background: #ddd;
+      border-radius: 5px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #007bff;
+      border: 2px solid #ddd;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    input[type="number"] {
+      width: 70px;
+      margin-right: 10px;
+    }
+    .button-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Audio Slicer</h1>
+  <input type="file" id="audioFileInput" accept="audio/*">
+  <div class="controls">
+    <audio id="audioPlayer" controls></audio>
+    <div class="slider">
+      <label for="startSlider">Start Time:</label>
+      <input type="number" id="startTimeInput" min="0" step="0.01" value="0" disabled>
+      <input type="range" id="startSlider" min="0" step="0.01" value="0" disabled>
+    </div>
+    <div class="slider">
+      <label for="endSlider">Stop Time:</label>
+      <input type="number" id="endTimeInput" min="0" step="0.01" value="0" disabled>
+      <input type="range" id="endSlider" min="0" step="0.01" value="0" disabled>
+    </div>
+  </div>
+  <fieldset>
+    <legend>Playback Mode</legend>
+    <label>
+      <input type="radio" name="playbackMode" value="normal" checked disabled>
+      Play Once
+    </label>
+    <label>
+      <input type="radio" name="playbackMode" value="repeat" disabled>
+      Loop Playback
+    </label>
+  </fieldset>
+  <div class="button-container">
+    <button id="playbackToggle" disabled>Play</button>
+  </div>
+
+  <script>
+    const audioFileInput = document.getElementById("audioFileInput");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const startSlider = document.getElementById("startSlider");
+    const endSlider = document.getElementById("endSlider");
+    const startTimeInput = document.getElementById("startTimeInput");
+    const endTimeInput = document.getElementById("endTimeInput");
+    const playbackToggle = document.getElementById("playbackToggle");
+    const playbackModeRadios = document.getElementsByName("playbackMode");
+
+    let duration = 0;
+    let isPlaying = false;
+    let lastValidStartTime = 0;
+    let lastValidEndTime = 0;
+
+    // Enable/disable UI
+    const toggleUI = (enabled) => {
+      [startSlider, endSlider, startTimeInput, endTimeInput, playbackToggle, ...playbackModeRadios].forEach(
+        (el) => (el.disabled = !enabled)
+      );
+    };
+
+    // Reset UI
+    const resetUI = () => {
+      toggleUI(false);
+      audioPlayer.pause();
+      isPlaying = false;
+      playbackToggle.textContent = "Play";
+      startSlider.value = 0;
+      endSlider.value = duration || 0;
+      startTimeInput.value = 0;
+      endTimeInput.value = duration || 0;
+      playbackModeRadios[0].checked = true;
+    };
+
+    // Load audio file
+    audioFileInput.addEventListener("change", () => {
+      if (duration > 0 && !confirm("Loading a new file will reset your settings. Proceed?")) {
+        audioFileInput.value = "";
+        return;
+      }
+
+      const file = audioFileInput.files[0];
+      if (file) {
+        const audioURL = URL.createObjectURL(file);
+        audioPlayer.src = audioURL;
+        audioPlayer.load();
+
+        audioPlayer.addEventListener("loadedmetadata", () => {
+          duration = audioPlayer.duration;
+          lastValidStartTime = 0;
+          lastValidEndTime = duration;
+
+          startSlider.max = duration;
+          endSlider.max = duration;
+          endSlider.value = duration;
+          startTimeInput.max = duration;
+          endTimeInput.max = duration;
+          endTimeInput.value = duration;
+
+          toggleUI(true);
+        });
+      }
+    });
+
+    // Pause and resume playback during adjustments
+    const pauseDuringAdjustment = (callback) => {
+      const wasPlaying = isPlaying;
+      if (isPlaying) {
+        audioPlayer.pause();
+        isPlaying = false;
+      }
+      callback(); // Apply adjustment logic
+      if (wasPlaying) {
+        startPlayback();
+      }
+    };
+
+    // Validate and sync inputs/sliders
+    const validateAndUpdate = (input, slider, otherInput, otherSlider, isStart) => {
+      const value = parseFloat(input.value);
+      const otherValue = parseFloat(otherInput.value);
+
+      if (isNaN(value) || value < 0 || value > duration || (isStart && value >= otherValue) || (!isStart && value <= otherValue)) {
+        alert(`Invalid ${isStart ? "start" : "stop"} time.`);
+        input.value = isStart ? lastValidStartTime : lastValidEndTime;
+      } else {
+        slider.value = value;
+        if (isStart) lastValidStartTime = value;
+        else lastValidEndTime = value;
+      }
+    };
+
+    const syncSliderAndInput = (slider, input, otherSlider, otherInput, isStart) => {
+      slider.addEventListener("input", () => {
+        pauseDuringAdjustment(() => {
+          input.value = slider.value;
+          validateAndUpdate(input, slider, otherInput, otherSlider, isStart);
+        });
+      });
+
+      input.addEventListener("change", () => {
+        pauseDuringAdjustment(() => {
+          slider.value = input.value;
+          validateAndUpdate(input, slider, otherInput, otherSlider, isStart);
+        });
+      });
+    };
+
+    syncSliderAndInput(startSlider, startTimeInput, endSlider, endTimeInput, true);
+    syncSliderAndInput(endSlider, endTimeInput, startSlider, startTimeInput, false);
+
+    // Playback logic
+    const startPlayback = () => {
+      const startTime = parseFloat(startSlider.value);
+      const endTime = parseFloat(endSlider.value);
+      const loop = [...playbackModeRadios].find((r) => r.checked).value === "repeat";
+
+      isPlaying = true;
+      playbackToggle.textContent = "Pause";
+      audioPlayer.currentTime = startTime;
+      audioPlayer.play();
+
+      audioPlayer.ontimeupdate = () => {
+        if (audioPlayer.currentTime >= endTime) {
+          if (loop) {
+            audioPlayer.currentTime = startTime;
+          } else {
+            audioPlayer.pause();
+            playbackToggle.textContent = "Play";
+            isPlaying = false;
+          }
+        }
+      };
+    };
+
+    playbackToggle.addEventListener("click", () => {
+      if (isPlaying) {
+        audioPlayer.pause();
+        isPlaying = false;
+        playbackToggle.textContent = "Play";
+      } else {
+        startPlayback();
+      }
+    });
+  </script>
+</body>
+</html>
