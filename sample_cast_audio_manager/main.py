@@ -39,11 +39,11 @@ class SampleCastAudioManager:
             except KeyError:
                 print(f"Audio for '{filename}' is already removed!")
 
-    def play(self, filename, start=0, end=None):
+    def play(self, filename, start=0, end=None, gain=0):
         """Plays instance of SampleCastAudio by filename"""
         if filename not in self.audioStore:
             self.register(filename)
-        self.audioStore[filename].play(start, end)
+        self.audioStore[filename].play(start, end, gain)
 
     def stop(self, filename):
         """Stops instance of SampleCastAudio by filename"""

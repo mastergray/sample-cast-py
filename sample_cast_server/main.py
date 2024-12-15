@@ -58,16 +58,18 @@ class SampleCastServer:
                 audioPath = body.get("audioPath")
                 start = body.get("start", 0)
                 end = body.get("end", None)
+                gain = body.get("gain", 0)
 
                 # Convert values:
                 start = float(start)
                 end = float(end) if end is not None else end
+                gain = int(gain)
 
                 # Show message:
                 print(f"Playing {audioPath}...")
      
                 # Play audio:
-                self.audioManager.play(audioPath, start, end)
+                self.audioManager.play(audioPath, start, end, gain)
 
                 # Send success message:
                 return str(f"Playing {audioPath}"), 200
@@ -77,7 +79,6 @@ class SampleCastServer:
                 print(f"Could Not Play Audio: {err}")
                 return str(err), 500
             
-
         # POST :: /stop
         @self.app.route("/stop", methods=["POST"])
         def stop_audio():
